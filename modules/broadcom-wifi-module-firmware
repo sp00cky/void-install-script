@@ -1,0 +1,20 @@
+#!/bin/bash
+title=broadcom-wifi-module-firmware
+description="- Broadcom Wifi module firmware"
+status=on
+
+# If this is toggled off, and the user is using the regular base metapackage,
+# the packages will be removed from the system.
+# If the user has defined their own basesystem, install if enabled.
+#
+# Installs:
+# broadcom-wl-dkms - 
+#   - https://github.com/void-linux/void-packages/tree/master/srcpkgs/broadcom-wl-dkms
+#   - https://wireless.docs.kernel.org/en/latest/en/users/drivers/b43/developers.html#developers-info
+#
+main() {
+    [ "$basesystem" != "base-system" ] &&
+        { commandFailure="Broadcom Wifi module firmware installation has failed." ; install broadcom-wl-dkms || die ; }
+
+    return 0
+}

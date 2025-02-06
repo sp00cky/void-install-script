@@ -23,7 +23,12 @@ fi
 
 drawDialog --msgbox "Welcome!\n\nThis is primarily a guided installer, but at any moment you may press the 'Map' button to jump around the installer in a non-linear way, or to go back and change settings.\n\nYou may use your TAB key, arrow keys, and Enter/Return to navigate this TUI.\n\nPressing Enter now will begin the installation process, but no changes will be made to the disk until you confirm your installation settings." 0 0
 
+#############
+# FUNCTIONS #
+#############
 # Each section of the installer will have its own function, so the user can go back to a specific spot to change something.
+
+# Partitioner - Filesystem
 diskConfig() {
     local diskList=$(lsblk -d -o NAME,SIZE -n -e7)
     local diskIndicator=$(lsblk -o NAME,SIZE,TYPE -e7)
@@ -46,14 +51,14 @@ diskConfig() {
         drawDialog --title "Partitioner - Wipe Disk" --yesno "Would you like to securely wipe the selected disk before setup?\n\nThis can take quite a long time depending on how many passes you choose.\n\nBe aware that doing this on an SSD is likely a bad idea." 0 0 &&
             wipedisk=$(drawDialog --title "Partitioner - Wipe Disk" --inputbox "How many passes would you like to do on this disk?\n\nSane values include 1-3. The more passes you choose, the longer this will take." 0 0)
     else
-        [ "$?" == "3" ] && dungeonmap
+        [ "$?" == "3" ] && mainMenu
         encryption="No"
     fi
 
     if drawDialog --title "Partitioner - LVM" --extra-button --extra-label "Map" --yesno "Would you like to use LVM?" 0 0 ; then
         lvm="Yes"
     else
-        [ "$?" == "3" ] && dungeonmap
+        [ "$?" == "3" ] && mainMenu
         lvm="No"
     fi
 
@@ -64,7 +69,7 @@ diskConfig() {
             swapStyle=$(drawDialog --begin 2 2 --title "Disk Details" --infobox "$diskIndicator" 0 0 --and-widget --no-cancel --title "Partitioner - Swap" --menu "What style of swap would you like to use?\n\nIf you are unsure, 'swapfile' is recommended." 0 0 0 "swapfile" "- On-filesystem swapfile" "zram" "- RAM in your RAM, but smaller")
         fi
     else
-        [ "$?" == "3" ] && dungeonmap
+        [ "$?" == "3" ] && mainMenu
     fi
 
     case "$swapStyle" in
@@ -77,7 +82,7 @@ diskConfig() {
     esac
 
     rootSize=$(drawDialog --begin 2 2 --title "Disk Details" --extra-button --extra-label "Map" --infobox "$diskIndicator" 0 0 --and-widget --no-cancel --title "Partitioner - Root" --inputbox "If you would like to limit the size of your root filesystem, such as to have a separate home partition, you can enter a value such as '50G' here.\n\nOtherwise, if you would like your root partition to take up the entire drive, enter 'full' here." 0 0)
-    [ "$?" == "3" ] && dungeonmap
+    [ "$?" == "3" ] && mainMenu
 
     if [ "$rootSize" == "full" ]; then
         local separateHomePossible="No"
@@ -91,46 +96,70 @@ diskConfig() {
         if drawDialog --title "Partitioner - Home" --extra-button --extra-label "Map" --yesno "Would you like to have a separate home partition?" 0 0 ; then
             homeSize=$(drawDialog --begin 2 2 --title "Disk Details" --infobox "$diskIndicator" 0 0 --and-widget --no-cancel --title "Partitioner - Home" --inputbox "How large would you like your home partition to be?\n(Example: '100G')\n\nYou can choose to use the rest of your disk after the root partition by entering 'full' here." 0 0)
         else
-            [ "$?" == "3" ] && dungeonmap
+            [ "$?" == "3" ] && mainMenu
         fi
 
     filesystem=$(drawDialog --no-cancel --title "Partitioner - Filesystem" --extra-button --extra-label "Map" --menu "If you are unsure, choose 'ext4'" 0 0 0 "ext4" "" "xfs" "")
-    [ "$?" == "3" ] && dungeonmap
 
+    # If the button "Map" is clicked, it calls the `mainMenu` function.
+    [ "$?" == "3" ] && mainMenu
+
+    # We are done. What we do next?
+    # Call the next function.
     suConfig
 }
 
+# sudo OR doas
+#
+# The `suConfig` function uses `drawDialog` to display a menu with options "sudo", "doas", and "none".
+# The `--extra-button` and `--extra-label` "Map" options add an additional button labeled "Map".
+# If the user selects the "Map" button, indicated by the exit status `$?` being `3`, the `mainMenu` function is called.
+# 
+# After handling the `drawDialog` selection, the `kernelConfig` function is called.
+#
+# When the user selects the "doas" option in the dialog presented by the `suConfig` function, the selected value is stored
+# in the `su` variable.
+#
+# This variable is then used later in the `confirm` function to display the selected option
+# and in the `_install` function to pass the variable to the system during installation setup.
+#
 suConfig() {
     su=$(drawDialog --no-cancel --title "SU Choice" --extra-button --extra-label "Map" --menu "If you are unsure, choose 'sudo'" 0 0 0 "sudo" "" "doas" "" "none" "")
-    [ "$?" == "3" ] && dungeonmap
+    [ "$?" == "3" ] && mainMenu
 
+    # We are done. What we do next?
+    # Call the next function.
     kernelConfig
 }
 
+# Kernel choice
 kernelConfig() {
     kernel=$(drawDialog --no-cancel --title "Kernel Choice" --extra-button --extra-label "Map" --menu "If you are unsure, choose 'linux'" 0 0 0 "linux" "- Normal Void kernel" "linux-lts" "- Older LTS kernel" "linux-mainline" "- Bleeding edge kernel")
-    [ "$?" == "3" ] && dungeonmap
+    [ "$?" == "3" ] && mainMenu
 
+    # We are done. What we do next?
+    # Call the next function.
     bootloaderConfig
 }
 
+# Bootloader choice
 bootloaderConfig() {
     bootloader=$(drawDialog --no-cancel --title "Bootloader choice" --extra-button --extra-label "Map" --menu "If you are unsure, choose 'grub'" 0 0 0 "grub" "- Traditional bootloader" "uki" "- Unified Kernel Image" "none" "- Installs no bootloader (Advanced)")
-    [ "$?" == "3" ] && dungeonmap
+    [ "$?" == "3" ] && mainMenu
 
     hostnameConfig
 }
 
 hostnameConfig() {
     hostname=$(drawDialog --no-cancel --title "System Hostname" --extra-button --extra-label "Map" --inputbox "Set your system hostname." 0 0)
-    [ "$?" == "3" ] && dungeonmap
+    [ "$?" == "3" ] && mainMenu
 
     userConfig
 }
 
 userConfig() {
     username=$(drawDialog --title "Create User" --extra-button --extra-label "Map" --inputbox "What would you like your username to be?\n\nIf you do not want to set a user here, choose 'Skip'\n\nYou will be asked to set a password later." 0 0)
-    [ "$?" == "3" ] && dungeonmap
+    [ "$?" == "3" ] && mainMenu
 
     timezoneConfig
 }
@@ -170,7 +199,7 @@ repositoryConfig() {
         xmirror
         repository=$(cat /etc/xbps.d/*-repository-main.conf | sed 's/repository=//g')
     else
-        [ "$?" == "3" ] && dungeonmap
+        [ "$?" == "3" ] && mainMenu
         [ "$libc" == "glibc" ] && repository="https://repo-default.voidlinux.org/current"
         [ "$libc" == "musl" ] && repository="https://repo-default.voidlinux.org/current/musl"
     fi
@@ -184,12 +213,12 @@ repositoryConfig() {
 graphicsConfig() {
     if [ "$libc" == "glibc" ]; then
         graphics=$(drawDialog --title 'Graphics Drivers' --extra-button --extra-label "Map" --checklist 'Select graphics drivers, or choose 'Skip' if you would like to skip:' 0 0 0 'intel' '' 'off' 'intel-32bit' '' 'off' 'amd' '' 'off' 'amd-32bit' '' 'off' 'nvidia' '- Proprietary driver' 'off' 'nvidia-32bit' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau driver (experimental)' 'off' 'nvidia-nouveau-32bit' '' 'off')
-        [ "$?" == "3" ] && dungeonmap
+        [ "$?" == "3" ] && mainMenu
     fi
 
     if [ "$libc" == "musl" ]; then
         graphics=$(drawDialog --title 'Graphics Drivers' --extra-button --extra-label "Map" --checklist 'Select graphics drivers, or choose 'Skip' if you would like to skip: ' 0 0 0 'intel' '' 'off' 'amd' '' 'off' 'nvidia-nouveau' '- Nvidia Nouveau driver (experimental)' 'off')
-        [ "$?" == "3" ] && dungeonmap
+        [ "$?" == "3" ] && mainMenu
     fi
 
     [ -n "$graphics" ] &&
@@ -200,21 +229,21 @@ graphicsConfig() {
 
 networkConfig() {
     network=$(drawDialog --no-cancel --title "Networking - DHCP client" --extra-button --extra-label "Map" --menu "If you are unsure, choose 'NetworkManager'\n\nIf 'none' is chosen, dhcpcd will still be included but not enabled." 0 0 0 "NetworkManager" "" "dhcpcd" "" "none" "")
-    [ "$?" == "3" ] && dungeonmap
+    [ "$?" == "3" ] && mainMenu
 
     audioConfig
 }
 
 audioConfig() {
     audio=$(drawDialog --no-cancel --title "Audio Server" --extra-button --extra-label "Map" --menu "If you are unsure, 'pipewire' is recommended." 0 0 0 "pipewire" "" "pulseaudio" "" "none" "")
-    [ "$?" == "3" ] && dungeonmap
+    [ "$?" == "3" ] && mainMenu
 
     desktopConfig
 }
 
 desktopConfig() {
     desktop=$(drawDialog --no-cancel --title "Desktop Environment" --extra-button --extra-label "Map" --menu "" 0 0 0 "gnome" "" "kde" "" "xfce" "" "sway" "" "swayfx" "" "wayfire" "" "i3" "" "niri" "" "none" "")
-    [ "$?" == "3" ] && dungeonmap
+    [ "$?" == "3" ] && mainMenu
 
     case "$desktop" in
         sway) drawDialog --extra-button --extra-label "Map" --msgbox "Sway will have to be started manually on login. This can be done by entering 'dbus-run-session sway' after logging in on the new installation." 0 0 ;;
@@ -232,20 +261,63 @@ modulesConfig() {
     [ -n "$modules" ] &&
         unset modulesDialogArray
 
+    # Read the list of available modules from the modules directory.
     read -a modulesList -d '\n' < <(ls modules/ | sort)
 
+    # Iterate over each module.
     for i in "${modulesList[@]}"
     do
+        # Check the module file exists and validity with the `checkModule` function (lib/libviss).
         if [ -e "modules/$i" ] && checkModule ; then
+            # Construct an array with the title, description, and status of each module.
             modulesDialogArray+=("'$title' '$description' '$status'")
         fi
     done
 
+    # Displays a checklist dialog for enabling or disabling modules.
+    #
     # Using dash here as a simple solution to it misbehaving when ran with bash
     modules=( $(sh -c "dialog --stdout --title 'Extra Options' --extra-button --extra-label "Map" --no-mouse --backtitle "https://github.com/kkrruumm/void-install-script" --checklist 'Enable or disable extra install options: ' 0 0 0 $(echo "${modulesDialogArray[@]}")") )
-    [ "$?" == "3" ] && dungeonmap
 
+    # If the button "Map" is clicked, it calls the `mainMenu` function.
+    [ "$?" == "3" ] && mainMenu
+
+    # Proceed to the `confirm` function after the user makes their selections.
     confirm
+}
+
+debug() {
+    debug_file="/tmp/installer_debug.log"
+    echo "Repo mirror: $repository" > "$debug_file"
+    echo "Bootloader: $bootloader" >> "$debug_file"
+    echo "Kernel: $kernel" >> "$debug_file"
+    echo "Target disk: $diskInput" >> "$debug_file"
+    echo "Encryption: $encryption" >> "$debug_file"
+    if [ "$encryption" == "Yes" ] && [ -n "$wipedisk" ]; then
+        echo "Disk wipe passes: $wipedisk" >> "$debug_file"
+    elif [ "$encryption" == "Yes" ]; then
+        echo "Disk wipe passes: none" >> "$debug_file"
+    fi
+    echo "LVM: $lvm" >> "$debug_file"
+    echo "Filesystem: $filesystem" >> "$debug_file"
+    if [ -n "$swapStyle" ]; then
+        echo "Swap style: $swapStyle" >> "$debug_file"
+        echo "Swap size: $swapSize" >> "$debug_file"
+    else
+        echo "Swap style: none" >> "$debug_file"
+    fi
+    echo "Root size: $rootSize" >> "$debug_file"
+    [ -n "$homeSize" ] && echo "Home size: $homeSize" >> "$debug_file"
+    echo "Hostname: $hostname" >> "$debug_file"
+    echo "Timezone: $timezone" >> "$debug_file"
+    echo "Locale: $locale" >> "$debug_file"
+    [ -n "$username" ] && echo "User: $username" >> "$debug_file"
+    [ -n "$desktop" ] && echo "DE/WM: $desktop" >> "$debug_file"
+    [ -n "$network" ] && echo "DHCP client: $network" >> "$debug_file"
+    [ -n "$audio" ] && echo "Audio server: $audio" >> "$debug_file"
+    [ -n "$graphics" ] && echo "Graphics drivers: $graphics" >> "$debug_file"
+    [ "$desktop" == "i3" ] && [ -n "$lightdm" ] && echo "Install lightdm with i3?: $lightdm" >> "$debug_file"
+    [ -n "$modules" ] && echo "Enabled modules: ${modules[@]}" >> "$debug_file"
 }
 
 confirm() {
@@ -317,19 +389,100 @@ You can choose 'Restart' to go back to the beginning of the installer and change
 
     case $? in
         0)
+            debug
             _install
         ;;
         1)
             exit 0
         ;;
         3)
-            dungeonmap
+            mainMenu
         ;;
     esac
 }
 
-dungeonmap() {
-    waypoint=$(drawDialog --no-cancel --title "Dungeon Map" --menu "Choose a section to jump to:" 0 0 0 "Disk" "" "SU" "" "Kernel" "" "Bootloader" "" "Hostname" "" "User" "" "Timezone" "" "Locale" "" "Repository" "" "Graphics" "" "Network" "" "Audio" "" "Desktop" "" "Modules" "" "Overview" "")
+# confirm() {
+
+#     # Unset to prevent duplicates
+#     [ -n "$settings" ] &&
+#         unset settings
+
+#     # Construct confirm menu
+#     # I know this is a fucking mess, but it's better than the previous in-line logic.
+#     [ "$basesystem" != "base-system" ] &&
+#         settings="Base system: custom\n"
+
+#     settings+="Repo mirror: $repository\n"
+#     settings+="Bootloader: $bootloader\n"
+#     settings+="Kernel: $kernel\n"
+#     settings+="Target disk: $diskInput\n"
+#     settings+="Encryption: $encryption\n"
+
+#     if [ "$encryption" == "Yes" ] && [ -n "$wipedisk" ]; then
+#         settings+="Disk wipe passes: $wipedisk\n"
+#     elif [ "$encryption" == "Yes" ]; then
+#         settings+="Disk wipe passes: none\n"
+#     fi
+
+#     settings+="LVM: $lvm\n"
+#     settings+="Filesystem: $filesystem\n"
+
+#     if [ -n "$swapStyle" ]; then
+#         settings+="Swap style: $swapStyle\n"
+#         settings+="Swap size: $swapSize\n"
+#     else
+#         settings+="Swap style: none\n"
+#     fi
+
+#     settings+="Root size: $rootSize\n"
+
+#     [ -n "$homeSize" ] &&
+#         settings+="Home size: $homeSize\n"
+
+#     settings+="Hostname: $hostname\n"
+#     settings+="Timezone: $timezone\n"
+#     settings+="Locale: $locale\n"
+
+#     [ -n "$username" ] &&
+#         settings+="User: $username\n"
+
+#     [ -n "$desktop" ] &&
+#         settings+="DE/WM: $desktop\n"
+
+#     [ -n "$network" ] &&
+#         settings+="DHCP client: $network\n"
+
+#     [ -n "$audio" ] &&
+#         settings+="Audio server: $audio\n"
+
+#     [ -n "$graphics" ] &&
+#         settings+="Graphics drivers: $graphics\n"
+
+#     [ "$desktop" == "i3" ] && [ -n "$lightdm" ] &&
+#         settings+="Install lightdm with i3?: $lightdm"
+
+#     [ -n "$modules" ] &&
+#         settings+="Enabled modules: ${modules[@]}\n"
+
+#     drawDialog --yes-label "Install" --no-label "Exit" --extra-button --extra-label "Map" --title "Installation Overview" --yesno "Selecting 'Install' here will DESTROY ALL DATA on the chosen disk and install with the options below. \n\n
+# $settings\n
+# You can choose 'Restart' to go back to the beginning of the installer and change settings." 0 0
+
+#     case $? in
+#         0)
+#             _install
+#         ;;
+#         1)
+#             exit 0
+#         ;;
+#         3)
+#             mainMenu
+#         ;;
+#     esac
+# }
+
+mainMenu() {
+    waypoint=$(drawDialog --no-cancel --title "Installer Settings" --menu "Choose a section to jump to:" 0 0 0 "Disk" "" "SU" "" "Kernel" "" "Bootloader" "" "Hostname" "" "User" "" "Timezone" "" "Locale" "" "Repository" "" "Graphics" "" "Network" "" "Audio" "" "Desktop" "" "Modules" "" "Overview" "")
 
     case "$waypoint" in
         Disk) diskConfig ;;
@@ -356,6 +509,7 @@ _install() {
     . "$(pwd)"/setup/setupdesktop
 
     commandFailure="System chroot has failed."
+    
     cp /etc/resolv.conf /mnt/etc/resolv.conf || die
 
     syschrootVarPairs=("bootloader $bootloader" \
@@ -396,4 +550,5 @@ _install() {
     exit 0
 }
 
+# call the function diskconfig
 diskConfig

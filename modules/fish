@@ -1,39 +1,71 @@
 #!/bin/bash
 title="Fish Shell Setup"
 description="- Installs Fish shell and related tools"
-status=off
+status=on
 
 main() {
     # 
     commandFailure="Fish shell installation has failed."
 
     # Fish Shell
-    echo -e "Installing Fish shell... \n"
-    xbps-install -Sy -R $installRepo -r /mnt fish || failureCheck
-    echo -e "Fish shell has been installed. \n"
+    # Old way:
+    # echo -e "Installing Fish shell... \n"
+    # xbps-install -Sy -R $installRepo -r /mnt fish || failureCheck
+    # echo -e "Fish shell has been installed. \n"
+
+    # New way:
+    install fish ||
+        { commandFailure="Fish shell installation has failed."; die; }
 
     # Fish shell
-    echo -e "Setting Fish as the default shell... \n"
-    chroot /mnt /bin/bash -c "chsh -s /usr/bin/fish" || failureCheck
-    echo -e "Fish shell is now the default shell. \n"
+    # Old way:
+    # echo -e "Setting Fish as the default shell... \n"
+    # chroot /mnt /bin/bash -c "chsh -s /usr/bin/fish" || failureCheck
+    # echo -e "Fish shell is now the default shell. \n"
+
+    # New way:
+    chroot /mnt /bin/bash -c "chsh -s /usr/bin/fish" ||
+        { commandFailure="Setting Fish as the default shell has failed."; die; }
 
     # Oh My Fish
-    echo -e "Installing Oh My Fish... \n"
-    chroot /mnt /bin/bash -c "curl -L https://get.oh-my.fish | fish" || failureCheck
-    echo -e "Oh My Fish has been installed. \n"
+    # Old way:
+    # echo -e "Installing Oh My Fish... \n"
+    # chroot /mnt /bin/bash -c "curl -L https://get.oh-my.fish | fish" || failureCheck
+    # echo -e "Oh My Fish has been installed. \n"
+
+    # New way:
+    chroot /mnt /bin/bash -c "curl -L https://get.oh-my.fish | fish" ||
+        { commandFailure="Installing Oh My Fish has failed."; die; }
 
     # Fish
-    echo -e "Installing useful Fish plugins... \n"
-    chroot /mnt /usr/bin/fish -c "omf install bass" || failureCheck
-    chroot /mnt /usr/bin/fish -c "omf install pj" || failureCheck
-    chroot /mnt /usr/bin/fish -c "omf install git" || failureCheck
-    echo -e "Fish plugins have been installed. \n"
+    # Old way:
+    # echo -e "Installing useful Fish plugins... \n"
+    # chroot /mnt /usr/bin/fish -c "omf install bass" || failureCheck
+    # chroot /mnt /usr/bin/fish -c "omf install pj" || failureCheck
+    # chroot /mnt /usr/bin/fish -c "omf install git" || failureCheck
+    # echo -e "Fish plugins have been installed. \n"
+
+    # New way:
+    chroot /mnt /usr/bin/fish -c "omf install bass" ||
+        { commandFailure="Installing ~bass~ fish-plugin has failed."; die; }
+    chroot /mnt /usr/bin/fish -c "omf install pj" ||
+        { commandFailure="Installing ~pj~ fish-plugin has failed."; die; }
+    chroot /mnt /usr/bin/fish -c "omf install git" ||
+        { commandFailure="Installing ~git~ fish-plugin has failed."; die; }
 
     # Fish
-    echo -e "Configuring Fish shell environment... \n"
-    mkdir -p /mnt/home/$USER/.config/fish || failureCheck
-    echo "set PATH /usr/local/bin /usr/bin /bin /usr/sbin /sbin" > /mnt/home/$USER/.config/fish/config.fish || failureCheck
-    echo -e "Fish shell environment has been configured. \n"
+    # Old way:
+    # echo -e "Configuring Fish shell environment... \n"
+    # mkdir -p /mnt/home/$USER/.config/fish || failureCheck
+    # echo "set PATH /usr/local/bin /usr/bin /bin /usr/sbin /sbin" > /mnt/home/$USER/.config/fish/config.fish || failureCheck
+    # echo -e "Fish shell environment has been configured. \n"
+
+    # New way:
+
+    mkdir -p /mnt/home/$USER/.config/fish ||
+        { commandFailure="Creating Fish shell config directory has failed."; die; }
+    echo "set PATH /usr/local/bin /usr/bin /bin /usr/sbin /sbin" > /mnt/home/$USER/.config/fish/config.fish ||
+        { commandFailure="Creating Fish shell config file has failed."; die; }
 
     return 0
 }

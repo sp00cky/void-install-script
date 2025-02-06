@@ -30,11 +30,15 @@ case "$basesystem" in
         [ "$su" == "doas" ] &&
             { install opendoas || die ; }
 
+        # Check if the `profile` variable is set to "desktop".
+        # Check if the array `modulesChoice` does not contain the string "wifi-firmware".
+        # If both conditions are met, add "wifi-firmware", "iw", "wpa_supplicant" to the ignore list for package installation.
         if [ "$profile" == "desktop" ] && [[ ! ${modulesChoice[@]} =~ "wifi-firmware" ]]; then
             echo "ignorepkg=wifi-firmware" >> /mnt/etc/xbps.d/ignore.conf || die
             echo "ignorepkg=iw" >> /mnt/etc/xbps.d/ignore.conf || die
             echo "ignorepkg=wpa_supplicant" >> /mnt/etc/xbps.d/ignore.conf || die
 
+            # Remove the installed packages on the system.
             xbps-remove -ROoy -r /mnt wifi-firmware iw wpa_supplicant || die
         fi
     ;;

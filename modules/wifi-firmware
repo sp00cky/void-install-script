@@ -1,14 +1,20 @@
 #!/bin/bash
 title=wifi-firmware
-description="- Wifi firmware and utilities"
-status=on
+description="- Wifi firmware"
+status=off
 
 # If this is toggled off, and the user is using the regular base metapackage,
 # the packages will be removed from the system.
-# If the user has defined their own basesystem, install if enabled:
+# If the user has defined their own basesystem, install if enabled.
+
+# Installs:
+# wifi-firmware - WiFi firmware meta-package for Intel PRO 2100/2200-, Zydas 1211 wifi card
+#   - https://github.com/void-linux/void-packages/tree/master/srcpkgs/wifi-firmware
+#   - https://voidlinux.pkgs.org/current/voidlinux-main-x86_64/wifi-firmware-1.3_4.x86_64.xbps.html
+
 main() {
     [ "$basesystem" != "base-system" ] &&
-        { commandFailure="Wifi firmware and utility installation has failed." ; install iw wpa_supplicant wifi-firmware || die ; }
+        { commandFailure="Wifi firmware installation has failed." ; install wifi-firmware || die ; }
 
     return 0
 }

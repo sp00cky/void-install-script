@@ -1,0 +1,22 @@
+#!/bin/bash
+title=wifi-utilities
+description="- Wifi utilities"
+status=on
+
+# If this is toggled off, and the user is using the regular base metapackage,
+# the packages will be removed from the system.
+# If the user has defined their own basesystem, install if enabled.
+#
+# Installs:
+# wpa_supplicant - Linux WPA/WPA2/WPA3/IEEE 802.1X Supplicant
+#   - https://github.com/void-linux/void-packages/tree/master/srcpkgs/wpa_supplicant
+# 
+# iw - Utility for nl80211 based CLI configuration of wireless devices 
+#   - https://github.com/void-linux/void-packages/blob/master/srcpkgs/iw/template
+#
+main() {
+    [ "$basesystem" != "base-system" ] &&
+        { commandFailure="Wifi utility installation has failed." ; install iw wpa_supplicant || die ; }
+
+    return 0
+}
