@@ -51,6 +51,7 @@ do
             install libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit mesa-dri-32bit || die
         ;;
 
+        # https://docs.voidlinux.org/config/graphical-session/graphics-drivers/nvidia.html
         nvidia-nouveau)
             install mesa-dri mesa-nouveau-dri || die
         ;;
